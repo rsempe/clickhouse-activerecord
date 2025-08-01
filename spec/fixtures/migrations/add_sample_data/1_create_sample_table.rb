@@ -12,6 +12,10 @@ class CreateSampleTable < ActiveRecord::Migration[7.1]
       t.string :byte_array
       t.uuid :relation_uuid
       t.decimal :decimal_value, precision: 38, scale: 16
+
+      if ActiveRecord::Base.connection.server_version.to_f >= 25.4
+        t.json :json_value, null: false, default: {}
+      end
     end
   end
 end

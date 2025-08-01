@@ -15,6 +15,7 @@ RSpec.describe 'Model', :migrations do
     self.primary_key = 'event_name'
   end
   IS_NEW_CLICKHOUSE_SERVER = Model.connection.server_version.to_f >= 23.4
+  JSON_FIELD_SUPPORTED = Model.connection.server_version.to_f >= 25.4
 
   let(:date) { Date.today }
 
@@ -218,6 +219,30 @@ RSpec.describe 'Model', :migrations do
       it 'keeps precision' do
         decimal_value = Model.first.decimal_value
         expect(decimal_value).to eq(BigDecimal('95891.74'))
+      end
+    end
+
+    if JSON_FIELD_SUPPORTED
+      describe 'JSON column type' do
+        let(:json) { { 'key' => 'value' } }
+        let!(:record1) { Model.create!(event_name: 'some event', json_value: json) }
+
+        it 'is mapped to :json' do
+          type = Model.columns_hash['json_value'].type
+          expect(type).to eq(:json)
+        end
+
+        it 'keeps JSON value' do
+          expect(Model.first.json_value).to eq(json)
+        end
+
+        context 'when the JSON column is complex' do
+          let(:json) { { 'key' => { 'nested_key' => 'value', 'another_key' => ['something'] } } }
+
+          it 'keeps JSON value' do
+            expect(Model.first.json_value).to eq(json)
+          end
+        end
       end
     end
 
